@@ -1,56 +1,70 @@
-// Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import api from "../../../utils/api";
-import JSONdb from "simple-json-db";
+import { nanoid } from "nanoid";
+import moment from "moment/moment";
 
-const db = new JSONdb("./customers.json");
+function getOrderQuery() {
+	const today = moment().format("YYYY-MM-DD");
+	const tomorrow = moment().add(1, "days").format("YYYY-MM-DD");
+	return `OrderDateStart=${today}T00:00:00&OrderDateEnd=${tomorrow}T00:00:00&Size=100`;
+}
 
-const getOrders = async (page) => {
-	page = page || 1;
-	const { data } = await api.get(`/orders?page=${page}`);
-	return data;
-};
-
-const getEmployeFromOrder = async (order) => {
-	console.log(`/orders/${order.orderId}/customer`);
+async function getParty(orderId) {
+	let result = {};
 	try {
-		const response = await api.get(`/orders/${order.orderId}/customer`);
+		const { data } = await api.get(`/orders/${orderId}/party`);
+		result = data;
+	} catch (error) {}
+	return result;
+}
+async function getGuestOfHonor(orderId) {
+	let result = {};
+	try {
+		const { data } = await api.get(`/orders/${orderId}/guestsofhonor`);
+		result = data;
+	} catch (error) {}
+	return result;
+}
+async function getCustomer(orderId) {
+	let result = {};
+	try {
+		const { data } = await api.get(`/orders/${orderId}/customer`);
+		result = data;
+	} catch (error) {}
+	return result;
+}
+async function getItems(orderId) {
+	let result = {};
+	try {
+		const { data } = await api.get(`/orders/${orderId}/items`);
+		result = data;
+	} catch (error) {}
+	return result;
+}
 
-		return response.data;
-	} catch (error) {
-		return false;
-	}
-};
-
-const parseData = (dataRaw, page) => {
-	const dataAll = Object.values(dataRaw);
-	const data = dataAll.slice(page * 10 - 10, page * 10);
-	return {
-		success: true,
-		length: data.length,
-		data,
-	};
-};
-
-const saveCustomersFromOrders = async (orders) => {
-	await Promise.all(
+async function parseOrders(orders) {
+	const results = Promise.all(
 		orders.map(async (order) => {
-			if (!db.has(order.orderId)) {
-				console.log("saving order", order.orderId);
-				const customer = await getEmployeFromOrder(order);
+			let party = await getParty(order.orderId);
+			let guestOfHonor = await getGuestOfHonor(order.orderId);
+			let customer = await getCustomer(order.orderId);
+			let items = await getItems(order.orderId);
 
-				customer && db.set(order.orderId, customer);
-			}
+			return {
+				...order,
+				party,
+				guestOfHonor,
+				customer,
+				items,
+				id: nanoid(),
+			};
 		})
 	);
-};
+
+	return results;
+}
 
 export default async function handler(req, res) {
-	const page = req.query.page || 1;
-	const { items: orders } = await getOrders(page);
-
-	// save
-	await saveCustomersFromOrders(orders);
-
-	const dataRaw = await db.JSON();
-	res.status(200).json(parseData(dataRaw, page));
+	const { data: orderResponse } = await api.get(`orders?${getOrderQuery()}`);
+	const ordersBase = orderResponse.items;
+	res.status(200).json(await parseOrders(ordersBase));
 }
