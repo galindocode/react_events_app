@@ -1,5 +1,6 @@
 import LocalPrintshopIcon from "@mui/icons-material/LocalPrintshop";
 import RemoveRedEyeIcon from "@mui/icons-material/RemoveRedEye";
+import Link from "next/link";
 export const columns = [
 	{ field: "orderDate", headerName: "Hora y fecha", width: 170 },
 	{ field: "orderNumber", headerName: "Order #", width: 170 },
@@ -55,12 +56,18 @@ export const columns = [
 		width: 170,
 		renderCell: (params) => (
 			<div className='flex gap-3'>
-				<button className='text-blue-500 hover:text-blue-600 transition-colors duration-200 '>
+				<a
+					href={`order/${params.row.orderId}`}
+					className='text-blue-500 hover:text-blue-600 transition-colors duration-200 '
+				>
 					<LocalPrintshopIcon />
-				</button>
-				<button className='text-blue-500 hover:text-blue-600 transition-colors duration-200'>
+				</a>
+				<a
+					href={`order/${params.row.orderId}`}
+					className='text-blue-500 hover:text-blue-600 transition-colors duration-200'
+				>
 					<RemoveRedEyeIcon />
-				</button>
+				</a>
 			</div>
 		),
 	},
